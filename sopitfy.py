@@ -7,7 +7,7 @@ st.image("spotify.png", width=150)
 st.title("Predicción de Streams")
 
 # 2. Cargar datos y entrenar modelo en 3 líneas
-df = pd.read_csv("most_streamed_spotify_2025_clean.csv")
+df = pd.read_csv("most_streamed_spotify_2025_cleaned_v2.csv")
 X = df[["daily_streams"]]
 y = df["spotify_streams_total"]
 model = LinearRegression().fit(X, y)
