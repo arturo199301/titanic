@@ -4,7 +4,7 @@ from sklearn.ensemble import RandomForestRegressor
 
 # 1. Encabezado con imagen y título
 st.image("spotify.png", width=150)
-st.title("🎵 Predicción Completa de Streams")
+st.title("Predicción Completa de Streams")
 
 # 2. Cargar datos
 df = pd.read_csv("most_streamed_spotify_2025_cleaned_v2.csv")
