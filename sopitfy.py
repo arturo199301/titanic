@@ -23,7 +23,7 @@ model.fit(X, y)
 # 5. Entradas del usuario (Argumentos de entrada)
 daily_streams = st.number_input("Reproducciones diarias:", value=1_500_000, step=100_000)
 rank = st.number_input("Ranking diario (puesto en lista):", min_value=1, value=10)
-artists = st.slider("Cantidad de artistas en la canción:", min_value=1, max_value=5, value=1)
+artists =st.number_input("Cantidad de artistas en la canción:", min_value=1, max_value=5, value=1)
 is_collab = st.checkbox("¿Es una colaboración entre varios artistas?")
 
 # 6. Botón de predicción
