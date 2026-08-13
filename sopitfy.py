@@ -24,7 +24,7 @@ X, y = load_data()
 model = LogisticRegression(max_iter=1000).fit(X, y)
 
 # 3. Interfaz básica y Título
-st.title("🎯 Clasificador de Colaboraciones")
+st.title("Clasificador de Colaboraciones")
 st.markdown("Ingresa los datos para predecir si es una canción solista o una colaboración.")
 
 # Entradas del usuario
@@ -33,7 +33,7 @@ diarias = st.number_input("Reproducciones diarias estimadas:", value=300000)
 cuota = st.number_input("Cuota de mercado diaria (%):", value=0.15)
 
 # 4. Predicción
-if st.button("🔮 Clasificar Canción"):
+if st.button("Clasificar Canción"):
     # Preparar datos de entrada
     input_data = [[artistas, diarias, cuota]]
     pred = model.predict(input_data)[0]
@@ -44,6 +44,4 @@ if st.button("🔮 Clasificar Canción"):
     else:
         st.info("👤 **Predicción:** Es una canción de Solista")
 
-# Pie de página opcional
-st.markdown("---")
-st.caption("Nota: Este es un modelo de ejemplo con fines educativos.")
+
