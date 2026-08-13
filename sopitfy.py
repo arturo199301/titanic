@@ -8,7 +8,7 @@ st.image("spotify.png", width=150)
 st.title("🎵 Predicción Completa de Streams")
 
 # 2. Cargar datos
-df = pd.read_csv("most_streamed_spotify_2025.csv")
+df = pd.read_csv("most_streamed_spotify_2025.cleaned_v2.csv")
 
 # 3. Definir características (argumentos) y variable a predecir
 features = ['daily_streams', 'daily_streams_rank', 'billed_artist_count', 'is_collaboration']
