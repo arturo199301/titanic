@@ -2,46 +2,36 @@ import streamlit as st
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 
-# 1. Configuración y Encabezado con Imagen
-st.set_page_config(page_title="Spotify Classifier", page_icon="🎵", layout="centered")
-
-# Muestra la imagen (ajusta la ruta si es necesario)
+# 1. Configuración de página e Imagen
+st.set_page_config(page_title="Spotify Classifier", page_icon="🎵")
 st.image("spotify.png", use_container_width=True)
 
-# 2. Cargar datos y entrenar el Modelo (Clasificación)
-# Nota: Asumimos que el archivo 'image_0.png' está en la misma carpeta que este script.
+# 2. Cargar datos
 @st.cache_data
 def load_data():
-    df = pd.read_csv("most_streamed_spotify_2025_cleaned_v2.csv")
-    # Features y Target
-    features = ['billed_artist_count', 'daily_streams', 'daily_stream_share_pct']
-    target = 'is_collaboration_int'
-    return df[features], df[target]
+    return pd.read_csv("most_streamed_spotify_2025_cleaned_v2.csv")
 
-X, y = load_data()
+df = load_data()
 
-# Entrenar modelo (Regresión Logística para clasificación simple)
-model = LogisticRegression(max_iter=1000).fit(X, y)
+# 3. Entrenar modelo de Clasificación (¿Es colaboración?)
+X = df[['billed_artist_count', 'daily_streams', 'daily_stream_share_pct']]
+y = df['is_collaboration_int']
 
-# 3. Interfaz básica y Título
-st.title("Clasificador de Colaboraciones")
-st.markdown("Ingresa los datos para predecir si es una canción solista o una colaboración.")
+model = LogisticRegression().fit(X, y)
 
-# Entradas del usuario
-artistas = st.number_input("Cantidad de artistas acreditados:", min_value=1, value=2, step=1)
-diarias = st.number_input("Reproducciones diarias estimadas:", value=300000)
-cuota = st.number_input("Cuota de mercado diaria (%):", value=0.15)
+# 4. Interfaz
+st.title("🎯 Clasificador: Solista vs Colaboración")
 
-# 4. Predicción
-if st.button("Clasificar Canción"):
-    # Preparar datos de entrada
-    input_data = [[artistas, diarias, cuota]]
-    pred = model.predict(input_data)[0]
+artistas = st.number_input("Cantidad de artistas:", min_value=1, value=2)
+diarias = st.number_input("Reproducciones diarias:", value=300000)
+cuota = st.number_input("Cuota diaria (%):", value=0.15)
+
+# 5. Predicción
+if st.button("🔮 Clasificar"):
+    pred = model.predict([[artistas, diarias, cuota]])[0]
+    prob = model.predict_proba([[artistas, diarias, cuota]])[0][1] * 100
     
-    # Mostrar resultado de forma clara
     if pred == 1:
-        st.success("🤝 **Predicción:** Es una Colaboración")
+        st.success(f"🤝 **Es una Colaboración** ({prob:.1f}% de probabilidad)")
     else:
-        st.info("👤 **Predicción:** Es una canción de Solista")
-
-
+        st.info(f"👤 **Es de un Solista** ({100 - prob:.1f}% de probabilidad)")
