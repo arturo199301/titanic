@@ -20,14 +20,14 @@ y = df['is_collaboration_int']
 model = LogisticRegression().fit(X, y)
 
 # 4. Interfaz
-st.title("🎯 Clasificador: Solista vs Colaboración")
+st.title("Clasificador: Solista vs Colaboración")
 
 artistas = st.number_input("Cantidad de artistas:", min_value=1, value=2)
 diarias = st.number_input("Reproducciones diarias:", value=300000)
 cuota = st.number_input("Cuota diaria (%):", value=0.15)
 
 # 5. Predicción
-if st.button("🔮 Clasificar"):
+if st.button("Clasificar"):
     pred = model.predict([[artistas, diarias, cuota]])[0]
     prob = model.predict_proba([[artistas, diarias, cuota]])[0][1] * 100
     
