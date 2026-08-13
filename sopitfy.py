@@ -6,7 +6,7 @@ from sklearn.linear_model import LogisticRegression
 st.set_page_config(page_title="Spotify Classifier", page_icon="🎵", layout="centered")
 
 # Muestra la imagen (ajusta la ruta si es necesario)
-st.image("image_0.png", use_container_width=True)
+st.image("spotify.png", use_container_width=True)
 
 # 2. Cargar datos y entrenar el Modelo (Clasificación)
 # Nota: Asumimos que el archivo 'image_0.png' está en la misma carpeta que este script.
