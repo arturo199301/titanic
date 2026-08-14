@@ -7,7 +7,7 @@ from sklearn.metrics import accuracy_score
 
 # 1. Configuración de página e Imagen
 st.set_page_config(page_title="Spotify SVM 5-Var Classifier", page_icon="🎵", layout="wide")
-st.image("spotify.png", use_container_width=True)
+st.image("spotify.png")
 
 # 2. Cargar datos
 @st.cache_data
