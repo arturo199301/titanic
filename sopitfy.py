@@ -1,51 +1,47 @@
 import streamlit as st
 import pandas as pd
-from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import RandomForestClassifier
 
 # 1. Configuración de página e Imagen
-st.set_page_config(page_title="Spotify Top 100 Classifier", page_icon="🎵")
+st.set_page_config(page_title="Spotify Market Share Classifier", page_icon="🎵")
 st.image("spotify.png", use_container_width=True)
 
-# 2. Cargar datos y preparar la variable objetivo
+# 2. Cargar datos
 @st.cache_data
 def load_data():
     df = pd.read_csv("most_streamed_spotify_2025_cleaned_v2.csv")
-    # Es 1 si está dentro del Top 100 del ranking diario, 0 si no
-    df['is_top100'] = (df['daily_streams_rank'] <= 100).astype(int)
+    # Target: 1 si el porcentaje de cuota diaria es superior a la mediana, 0 si es inferior
+    mediana_cuota = df['daily_stream_share_pct'].median()
+    df['cuota_alta'] = (df['daily_stream_share_pct'] > mediana_cuota).astype(int)
     return df
 
 df = load_data()
 
-# 3. Entrenar el Modelo (Naive Bayes)
-features = ['spotify_streams_total', 'daily_streams', 'daily_stream_share_pct', 'billed_artist_count']
+# 3. Entrenar el Modelo (Random Forest con 3 Variables)
+features = ['daily_streams_rank', 'billed_artist_count', 'is_collaboration_int']
 X = df[features]
-y = df['is_top100']
+y = df['cuota_alta']
 
-model = GaussianNB().fit(X, y)
+model = RandomForestClassifier(n_estimators=100, random_state=42).fit(X, y)
 
 # 4. Interfaz de Usuario
-st.title("🎯 Clasificador: Predictor Top 100 (Naive Bayes)")
-st.write("Evalúa las probabilidades de que una canción ingrese al **Top 100 Diario**.")
+st.title("🎯 Clasificador: ¿Alta Cuota de Mercado?")
+st.write("Predice si la canción obtendrá una cuota de mercado superior al promedio.")
 
-col1, col2 = st.columns(2)
-
-with col1:
-    totales = st.number_input("Reproducciones Totales:", value=200000000, step=10000000)
-    diarias = st.number_input("Reproducciones Diarias:", value=400000, step=20000)
-
-with col2:
-    cuota = st.number_input("Cuota Diaria (%):", value=0.18, step=0.01)
-    artistas = st.number_input("Cantidad de Artistas:", min_value=1, value=1)
+# 3 Variables de Entrada
+rank_diario = st.number_input("1. Ranking diario (daily_streams_rank):", min_value=1, value=50)
+artistas = st.number_input("2. Cantidad de artistas (billed_artist_count):", min_value=1, max_value=5, value=1)
+es_colaboracion = st.checkbox("3. ¿Es una colaboración? (is_collaboration_int)")
 
 # 5. Predicción
-if st.button("🔮 Evaluar Top 100"):
-    input_data = [[totales, diarias, cuota, artistas]]
+if st.button("🔮 Evaluar Cuota"):
+    input_data = [[rank_diario, artistas, int(es_colaboracion)]]
     
     prediccion = model.predict(input_data)[0]
     probabilidad = model.predict_proba(input_data)[0][1] * 100
     
     st.markdown("---")
     if prediccion == 1:
-        st.success(f"🏆 **¡Dentro del Top 100!** Probabilidad calculada: **{probabilidad:.1f}%**")
+        st.success(f"📊 **¡Cuota de Mercado Alta!** Probabilidad: **{probabilidad:.1f}%**")
     else:
-        st.warning(f"📉 **Fuera del Top 100.** Probabilidad de entrar: **{probabilidad:.1f}%**")
+        st.info(f"📉 **Cuota de Mercado Normal/Baja.** Probabilidad de cuota alta: **{probabilidad:.1f}%**")
