@@ -11,8 +11,8 @@ try:
 except:
     pass
 
-st.title("🎵 Regresión Logística para saber si la cancion esta en el top 100s en Spotify")
-st.write("Modelo de clasificación sencillo utilizando 5 métricas clave sin fugar información del ranking general.")
+st.title("Regresión Logística para saber si la cancion esta en el top 100 en Spotify")
+st.write("Modelo de clasificación s ranking general.")
 
 # 1. Cargar datos y entrenar el modelo
 @st.cache_data
