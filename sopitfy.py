@@ -1,87 +1,88 @@
 import streamlit as st
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
 # 1. Configuración de página e Imagen
-st.set_page_config(page_title="Spotify 7-Var Classifier", page_icon="🎵", layout="wide")
+st.set_page_config(page_title="Spotify XGBoost 6-Var Classifier", page_icon="🎵", layout="wide")
 st.image("spotify.png", use_container_width=True)
 
-# 2. Cargar y preparar datos (7 Variables)
+# 2. Cargar datos
 @st.cache_data
 def load_data():
     df = pd.read_csv("most_streamed_spotify_2025_cleaned_v2.csv")
     
-    # Feature Engineering (Variable 7: Promedio de streams diarios por artista)
-    df['daily_streams_per_artist'] = df['daily_streams'] / df['billed_artist_count']
+    # Feature Engineering (Variable 6)
+    df['streams_per_artist'] = df['spotify_streams_total'] / df['billed_artist_count']
     
-    # Target Binario: 1 si es éxito consistente (Top 50 Y >200M streams), 0 si no
-    df['exito_consistente'] = (
-        (df['daily_streams_rank'] <= 50) & 
-        (df['spotify_streams_total'] > 200000000)
-    ).astype(int)
+    # Target Binario: 1 si está en el Top 30 diario, 0 si no
+    df['is_top30'] = (df['daily_streams_rank'] <= 30).astype(int)
     
     return df
 
 df = load_data()
 
-# 3. Definir EXACTAMENTE 7 Variables de Entrada
+# 3. Definir EXACTAMENTE 6 Variables de Entrada
 features = [
-    'spotify_streams_total',         # 1. Escuchas acumuladas totales
-    'daily_streams',                 # 2. Escuchas registradas en el día
-    'daily_streams_rank',            # 3. Posición en el ranking diario
-    'daily_stream_share_pct',        # 4. Cuota diaria de mercado %
-    'billed_artist_count',           # 5. Cantidad de artistas
-    'is_collaboration_int',          # 6. Indicador de colaboración (0 o 1)
-    'daily_streams_per_artist'       # 7. Promedio de escuchas diarias por artista
+    'spotify_streams_total',       # 1. Reproducciones totales acumuladas
+    'daily_streams',               # 2. Reproducciones diarias
+    'daily_stream_share_pct',      # 3. Cuota diaria de mercado %
+    'billed_artist_count',         # 4. Cantidad de artistas
+    'is_collaboration_int',        # 5. Indicador binario de colaboración (0 o 1)
+    'streams_per_artist'           # 6. Promedio de streams acumulados por artista
 ]
 
 X = df[features]
-y = df['exito_consistente']
+y = df['is_top30']
 
-# 4. Entrenar el Modelo (Random Forest)
+# 4. Entrenar el Modelo (XGBoost)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-model = RandomForestClassifier(n_estimators=100, random_state=42).fit(X_train, y_train)
+
+model = XGBClassifier(
+    n_estimators=100, 
+    learning_rate=0.08, 
+    max_depth=4, 
+    random_state=42, 
+    eval_metric='logloss'
+).fit(X_train, y_train)
 
 acc = accuracy_score(y_test, model.predict(X_test))
 
 # 5. Interfaz de Usuario
-st.title("🎯 Clasificador Random Forest: Éxito Consistente (7 Variables)")
-st.write("Ingresa los **7 parámetros** para evaluar si la canción se clasifica como un **Éxito Consistente**.")
+st.title("⚡ Clasificador XGBoost: Predictor Top 30 (6 Variables)")
+st.write("Ingresa los **6 parámetros** para evaluar si la canción pertenece al **Top 30 Diario**.")
 
 # Formulario organizado en 3 columnas
 col1, col2, col3 = st.columns(3)
 
 with col1:
     st.markdown("##### 📈 Volúmenes")
-    totales = st.number_input("1. Streams Totales (spotify_streams_total):", value=250000000, step=10000000)
-    diarias = st.number_input("2. Streams Diarios (daily_streams):", value=600000, step=25000)
+    totales = st.number_input("1. Streams Totales (spotify_streams_total):", value=220000000, step=10000000)
+    diarias = st.number_input("2. Streams Diarios (daily_streams):", value=550000, step=25000)
 
 with col2:
-    st.markdown("##### 🏆 Ranking y Mercado")
-    rank_diario = st.number_input("3. Ranking Diario (daily_streams_rank):", min_value=1, value=25)
-    cuota = st.number_input("4. Cuota Diaria % (daily_stream_share_pct):", value=0.25, step=0.01)
+    st.markdown("##### 🏆 Mercado")
+    cuota = st.number_input("3. Cuota Diaria % (daily_stream_share_pct):", value=0.24, step=0.01)
+    artistas = st.number_input("4. Cantidad de Artistas (billed_artist_count):", min_value=1, max_value=5, value=1)
 
 with col3:
-    st.markdown("##### 👥 Artistas y Formato")
-    artistas = st.number_input("5. Cantidad de Artistas (billed_artist_count):", min_value=1, max_value=5, value=2)
-    es_colab = st.checkbox("6. ¿Es Colaboración? (is_collaboration_int)", value=True)
+    st.markdown("##### 👥 Formato y Métricas Derivadas")
+    es_colab = st.checkbox("5. ¿Es Colaboración? (is_collaboration_int)")
     
-    # Cálculo automático de la Variable 7
-    daily_p_artist = diarias / artistas
-    st.info(f"7. Diarias/Artista (auto): **{daily_p_artist:,.0f}**")
+    # Cálculo automático de la Variable 6
+    streams_p_artist = totales / artistas
+    st.info(f"6. Streams/Artista (auto): **{streams_p_artist:,.0f}**")
 
 # 6. Predicción
-if st.button("🔮 Clasificar Canción", use_container_width=True):
+if st.button("🔮 Clasificar con XGBoost", use_container_width=True):
     input_data = [[
         totales, 
         diarias, 
-        rank_diario, 
         cuota, 
         artistas, 
         int(es_colab), 
-        daily_p_artist
+        streams_p_artist
     ]]
     
     prediccion = model.predict(input_data)[0]
@@ -89,8 +90,8 @@ if st.button("🔮 Clasificar Canción", use_container_width=True):
     
     st.markdown("---")
     if prediccion == 1:
-        st.success(f"🔥 **¡Éxito Consistente!** Probabilidad estimada: **{probabilidad:.1f}%**")
+        st.success(f"🔥 **¡Pertenece al Top 30!** Probabilidad estimada: **{probabilidad:.1f}%**")
     else:
-        st.info(f"📉 **Desempeño Estándar.** Probabilidad estimada: **{probabilidad:.1f}%**")
+        st.info(f"📉 **Fuera del Top 30.** Probabilidad estimada de entrar: **{probabilidad:.1f}%**")
         
-    st.caption(f"Precisión global del modelo en test: **{acc:.2%}**")
+    st.caption(f"Precisión global del modelo XGBoost en test: **{acc:.2%}**")
