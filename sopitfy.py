@@ -1,56 +1,49 @@
 import streamlit as st
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
 
-st.set_page_config(page_title="Spotify Clustering", layout="centered")
-st.title("🎧 Agrupamiento de Canciones (K-Means)")
+# 1. Configuración y Encabezado con Imagen
+st.set_page_config(page_title="Spotify Classifier", page_icon="🎵", layout="centered")
 
-# 1. Cargar datos
+# Muestra la imagen (ajusta la ruta si es necesario)
+st.image("image_0.png", use_container_width=True)
+
+# 2. Cargar datos y entrenar el Modelo (Clasificación)
+# Nota: Asumimos que el archivo 'image_0.png' está en la misma carpeta que este script.
 @st.cache_data
 def load_data():
-    return pd.read_csv("most_streamed_spotify_2025_cleaned_v2.csv")
+    df = pd.read_csv("most_streamed_spotify_2025_cleaned_v2.csv")
+    # Features y Target
+    features = ['billed_artist_count', 'daily_streams', 'daily_stream_share_pct']
+    target = 'is_collaboration_int'
+    return df[features], df[target]
 
-df = load_data()
+X, y = load_data()
 
-# 2. Selección de variables y clustering
-features = ['spotify_streams_total', 'daily_streams', 'daily_stream_share_pct']
-X = df[features]
+# Entrenar modelo (Regresión Logística para clasificación simple)
+model = LogisticRegression(max_iter=1000).fit(X, y)
 
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
+# 3. Interfaz básica y Título
+st.title("🎯 Clasificador de Colaboraciones")
+st.markdown("Ingresa los datos para predecir si es una canción solista o una colaboración.")
 
-# Definir 3 clusters (ej. "Bajo", "Medio", "Alto rendimiento")
-kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
-df['Cluster'] = kmeans.fit_predict(X_scaled)
+# Entradas del usuario
+artistas = st.number_input("Cantidad de artistas acreditados:", min_value=1, value=2, step=1)
+diarias = st.number_input("Reproducciones diarias estimadas:", value=300000)
+cuota = st.number_input("Cuota de mercado diaria (%):", value=0.15)
 
-st.subheader("Segmentación del Catálogo")
-
-# 3. Entrada para predecir el cluster de una nueva canción
-st.write("### Evalúa el perfil de tu canción:")
-total_streams = st.number_input("Reproducciones Totales:", value=int(df['spotify_streams_total'].median()))
-daily_streams = st.number_input("Reproducciones Diarias:", value=int(df['daily_streams'].median()))
-share_pct = st.number_input("Cuota Diaria (%):", value=float(df['daily_stream_share_pct'].mean()))
-
-if st.button("📌 Asignar Grupo"):
-    new_data = scaler.transform([[total_streams, daily_streams, share_pct]])
-    cluster_pred = kmeans.predict(new_data)[0]
+# 4. Predicción
+if st.button("🔮 Clasificar Canción"):
+    # Preparar datos de entrada
+    input_data = [[artistas, diarias, cuota]]
+    pred = model.predict(input_data)[0]
     
-    st.success(f"La canción pertenece al **Grupo {cluster_pred + 1}**")
+    # Mostrar resultado de forma clara
+    if pred == 1:
+        st.success("🤝 **Predicción:** Es una Colaboración")
+    else:
+        st.info("👤 **Predicción:** Es una canción de Solista")
 
-# 4. Visualización de los Clusters
+# Pie de página opcional
 st.markdown("---")
-st.subheader("Mapa de Grupos")
-fig, ax = plt.subplots(figsize=(6, 4))
-sns.scatterplot(
-    data=df, 
-    x='daily_streams', 
-    y='spotify_streams_total', 
-    hue='Cluster', 
-    palette='viridis', 
-    ax=ax
-)
-ax.set_title("Segmentación por Reproducciones Diarias vs Totales")
-st.pyplot(fig)
+st.caption("Nota: Este es un modelo de ejemplo con fines educativos.")
