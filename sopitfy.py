@@ -1,54 +1,56 @@
 import streamlit as st
 import pandas as pd
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.linear_model import SGDClassifier
 from sklearn.preprocessing import StandardScaler
 
 # 1. Configuración de página e Imagen
-st.set_page_config(page_title="Spotify KNN Classifier", page_icon="🎵")
+st.set_page_config(page_title="Spotify Viral Classifier", page_icon="🎵")
 st.image("spotify.png", use_container_width=True)
 
 # 2. Cargar datos
 @st.cache_data
 def load_data():
-    return pd.read_csv("most_streamed_spotify_2025_cleaned_v2.csv")
+    df = pd.read_csv("most_streamed_spotify_2025_cleaned_v2.csv")
+    # Target: 1 si la cuota de mercado diaria supera el 0.25%, 0 en caso contrario
+    df['impacto_viral'] = (df['daily_stream_share_pct'] > 0.25).astype(int)
+    return df
 
 df = load_data()
 
-# 3. Entrenar el Modelo KNN (4 Variables de Rendimiento -> Target: Colaboración)
-features = ['spotify_streams_total', 'daily_streams', 'daily_streams_rank', 'daily_stream_share_pct']
+# 3. Entrenar el Modelo (SGDClassifier con 3 Variables)
+features = ['spotify_streams_total', 'daily_streams', 'daily_streams_rank']
 X = df[features]
-y = df['is_collaboration_int']
+y = df['impacto_viral']
 
-# Escalado necesario para KNN
+# Escalado de características (recomendado para SGD)
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
-model = KNeighborsClassifier(n_neighbors=5).fit(X_scaled, y)
+model = SGDClassifier(loss='log_loss', max_iter=1000, random_state=42).fit(X_scaled, y)
 
 # 4. Interfaz de Usuario
-st.title("🎯 Clasificador KNN: Detección de Formato")
-st.write("Predice si la canción tiene perfil de **Colaboración** basándose en el comportamiento de sus métricas.")
+st.title("🎯 Clasificador SGD: ¿Canción Viral de Alto Impacto?")
+st.write("Predice si la canción superará el **0.25% de cuota de mercado diaria**.")
 
-# 4 Variables de Entrada
+# 3 Variables de Entrada
 col1, col2 = st.columns(2)
 
 with col1:
-    totales = st.number_input("1. Reproducciones Totales:", value=180000000, step=10000000)
-    diarias = st.number_input("2. Reproducciones Diarias:", value=320000, step=20000)
+    totales = st.number_input("1. Reproducciones Totales (spotify_streams_total):", value=300000000, step=10000000)
+    diarias = st.number_input("2. Reproducciones Diarias (daily_streams):", value=600000, step=25000)
 
 with col2:
-    rank_diario = st.number_input("3. Ranking Diario:", min_value=1, value=90)
-    cuota = st.number_input("4. Cuota Diaria (%):", value=0.16, step=0.01)
+    rank_diario = st.number_input("3. Ranking Diario (daily_streams_rank):", min_value=1, value=20)
 
 # 5. Predicción
-if st.button("🔮 Clasificar Formato"):
-    input_scaled = scaler.transform([[totales, diarias, rank_diario, cuota]])
+if st.button("🔮 Clasificar Impacto"):
+    input_scaled = scaler.transform([[totales, diarias, rank_diario]])
     
     prediccion = model.predict(input_scaled)[0]
     probabilidad = model.predict_proba(input_scaled)[0][1] * 100
     
     st.markdown("---")
     if prediccion == 1:
-        st.success(f"🤝 **Perfil de Colaboración.** Probabilidad: **{probabilidad:.1f}%**")
+        st.success(f"🔥 **¡Alto Impacto Viral!** Probabilidad: **{probabilidad:.1f}%**")
     else:
-        st.info(f"👤 **Perfil de Solista.** Probabilidad de ser colaboración: **{probabilidad:.1f}%**")
+        st.info(f"📈 **Impacto Estándar.** Probabilidad de ser alto impacto: **{probabilidad:.1f}%**")
