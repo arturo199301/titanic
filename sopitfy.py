@@ -18,7 +18,7 @@ def load_data():
 df = load_data()
 
 # 3. Entrenar el Modelo (Random Forest con 3 Variables)
-features = ['daily_streams_rank', 'billed_artist_count', 'is_collaboration_int']
+features = ['daily_streams_rank',  'is_collaboration_int']
 X = df[features]
 y = df['cuota_alta']
 
