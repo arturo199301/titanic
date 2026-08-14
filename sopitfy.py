@@ -4,7 +4,7 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.preprocessing import StandardScaler
 
 # 1. Configuración de página e Imagen
-st.set_page_config(page_title="Spotify Viral Classifier", page_icon="🎵")
+st.set_page_config(page_title="Spotify Viral Classifier")
 st.image("spotify.png", use_container_width=True)
 
 # 2. Cargar datos
