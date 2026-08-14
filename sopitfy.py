@@ -7,7 +7,7 @@ st.set_page_config(page_title="Modelo Sencillo (5 Variables) - Spotify Top 100",
 
 # Logo opcional
 try:
-    st.image(Image.open('spotify.png'), width=160)
+    st.image(Image.open('spotify.png'), width=500)
 except:
     pass
 
