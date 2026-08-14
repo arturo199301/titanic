@@ -11,7 +11,7 @@ try:
 except:
     pass
 
-st.title("Regresión Logística para saber si la cancion esta en el top 100 en Spotify")
+st.title("Regresión Logística para saber si la cancion esta en el top 100 en Spotify año 2025")
 st.write("Modelo de clasificación del ranking general.")
 
 # 1. Cargar datos y entrenar el modelo
