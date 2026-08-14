@@ -37,7 +37,7 @@ def entrenar_modelo_simple():
 df, modelo, features = entrenar_modelo_simple()
 
 # 2. Entradas del usuario (5 campos)
-st.subheader("📋 Ingresa las 5 variables de entrada:")
+st.subheader("Datos de entrada:")
 
 col1, col2 = st.columns(2)
 
