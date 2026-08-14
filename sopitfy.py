@@ -40,10 +40,10 @@ with col1:
     diarias = st.number_input("2. Reproducciones Diarias:", value=600000, step=25000)
 
 with col2:
-    rank_diario = st.number_input("3. Ranking Diario):", min_value=1, value=20)
+    rank_diario = st.number_input("3. Ranking Diario:", min_value=1, value=20)
 
 # 5. Predicción
-if st.button("🔮 Clasificar Impacto"):
+if st.button("Clasificar Impacto"):
     input_scaled = scaler.transform([[totales, diarias, rank_diario]])
     
     prediccion = model.predict(input_scaled)[0]
