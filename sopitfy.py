@@ -16,7 +16,7 @@ st.set_page_config(
 try:
     # Cargar la imagen proporcionada (guardada como 'image_1.png')
     spotify_logo = Image.open('spotify.png')
-    st.image(spotify_logo, width=500)
+    st.image(spotify_logo, width=600)
 except FileNotFoundError:
     st.warning("⚠️ No se encontró la imagen 'image_1.png'. Asegúrate de guardarla en la misma carpeta que app.py.")
 except Exception as e:
