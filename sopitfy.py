@@ -29,18 +29,18 @@ X_scaled = scaler.fit_transform(X)
 model = SGDClassifier(loss='log_loss', max_iter=1000, random_state=42).fit(X_scaled, y)
 
 # 4. Interfaz de Usuario
-st.title("🎯 Clasificador SGD: ¿Canción Viral de Alto Impacto?")
+st.title(" ¿Canción Viral de Alto Impacto?")
 st.write("Predice si la canción superará el **0.25% de cuota de mercado diaria**.")
 
 # 3 Variables de Entrada
 col1, col2 = st.columns(2)
 
 with col1:
-    totales = st.number_input("1. Reproducciones Totales (spotify_streams_total):", value=300000000, step=10000000)
-    diarias = st.number_input("2. Reproducciones Diarias (daily_streams):", value=600000, step=25000)
+    totales = st.number_input("1. Reproducciones Totales:", value=300000000, step=10000000)
+    diarias = st.number_input("2. Reproducciones Diarias:", value=600000, step=25000)
 
 with col2:
-    rank_diario = st.number_input("3. Ranking Diario (daily_streams_rank):", min_value=1, value=20)
+    rank_diario = st.number_input("3. Ranking Diario):", min_value=1, value=20)
 
 # 5. Predicción
 if st.button("🔮 Clasificar Impacto"):
@@ -51,6 +51,6 @@ if st.button("🔮 Clasificar Impacto"):
     
     st.markdown("---")
     if prediccion == 1:
-        st.success(f"🔥 **¡Alto Impacto Viral!** Probabilidad: **{probabilidad:.1f}%**")
+        st.success(f"**¡Alto Impacto Viral!** Probabilidad: **{probabilidad:.1f}%**")
     else:
-        st.info(f"📈 **Impacto Estándar.** Probabilidad de ser alto impacto: **{probabilidad:.1f}%**")
+        st.info(f"**Impacto Estándar.** Probabilidad de ser alto impacto: **{probabilidad:.1f}%**")
