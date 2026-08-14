@@ -23,7 +23,7 @@ except Exception as e:
     st.error(f"Error al cargar la imagen: {e}")
 
 # Título y Descripción
-st.title("🎵 Predictor Avanzado de Éxito en Spotify")
+st.title("Predictor Avanzado de Éxito en Spotify")
 st.write("Ingresa todas las métricas de la canción para determinar si se posicionará dentro del **Top 100 global**.")
 
 # ---------------------------------------------------------
