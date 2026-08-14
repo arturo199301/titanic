@@ -1,23 +1,66 @@
+import streamlit as st
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+from PIL import Image
+from sklearn.linear_model import LogisticRegression
 
-# Crear el modelo
-df = pd.read_csv('most_streamed_spotify_2025_cleaned_v2.csv')
-df['is_top_100'] = (df['rank'] <= 100).astype(int)
+st.set_page_config(page_title="Modelo Sencillo (5 Variables) - Spotify Top 100", page_icon="🎵")
 
-features = ['daily_streams', 'daily_stream_share_pct', 'billed_artist_count', 'is_collaboration_int', 'wrapped_global_top10_rank']
+# Logo opcional
+try:
+    st.image(Image.open('image_1.png'), width=160)
+except:
+    pass
 
-model = RandomForestClassifier(n_estimators=100, max_depth=6, random_state=42)
-model.fit(df[features], df['is_top_100'])
+st.title("🎵 Regresión Logística (5 Variables)")
+st.write("Modelo de clasificación sencillo utilizando 5 métricas clave sin fugar información del ranking general.")
 
-# Caso 1: Canción Solista (1 artista)
-cancion_solista = pd.DataFrame([[500000, 0.08, 1, 0, 0]], columns=features)
+# 1. Cargar datos y entrenar el modelo
+@st.cache_data
+def entrenar_modelo_simple():
+    df = pd.read_csv('most_streamed_spotify_2025_cleaned_v2.csv')
+    df['is_top_100'] = (df['rank'] <= 100).astype(int)
+    
+    # 5 variables
+    features = [
+        'daily_streams', 
+        'daily_stream_share_pct', 
+        'billed_artist_count', 
+        'is_collaboration_int',
+        'wrapped_global_top10_rank'
+    ]
+    
+    model = LogisticRegression(max_iter=1000)
+    model.fit(df[features], df['is_top_100'])
+    
+    return df, model, features
 
-# Caso 2: Misma canción pero siendo Colaboración (2 artistas)
-cancion_colaboracion = pd.DataFrame([[500000, 0.08, 2, 1, 0]], columns=features)
+df, modelo, features = entrenar_modelo_simple()
 
-prob_solo = model.predict_proba(cancion_solista)[0][1]
-prob_collab = model.predict_proba(cancion_colaboracion)[0][1]
+# 2. Entradas del usuario (5 campos)
+st.subheader("📋 Ingresa las 5 variables de entrada:")
 
-print(f"Probabilidad de ser Top 100 (Solista): {prob_solo * 100:.1f}%")
-print(f"Probabilidad de ser Top 100 (Colaboración): {prob_collab * 100:.1f}%")
+col1, col2 = st.columns(2)
+
+with col1:
+    daily_streams = st.number_input("1. Streams Diarios", value=1500000, step=50000)
+    share_pct = st.number_input("2. Cuota Diaria (%)", value=0.10, step=0.01)
+    wrapped = st.number_input("5. Posición Top 10 Wrapped (0 si no aplica)", value=0, min_value=0, max_value=10)
+
+with col2:
+    art_count = st.number_input("3. Número de Artistas", value=1, min_value=1, max_value=10)
+    is_collab = st.selectbox("4. ¿Es Colaboración?", ["No", "Sí"], index=0)
+
+collab_int = 1 if is_collab == "Sí" else 0
+
+# 3. Predicción
+if st.button("🚀 Evaluar Canción", use_container_width=True):
+    datos = pd.DataFrame([[daily_streams, share_pct, art_count, collab_int, wrapped]], columns=features)
+    
+    prediccion = modelo.predict(datos)[0]
+    probabilidad = modelo.predict_proba(datos)[0][1]
+    
+    st.divider()
+    if prediccion == 1:
+        st.success(f"🎉 **Es Top 100** (Probabilidad: **{probabilidad * 100:.1f}%**)")
+    else:
+        st.warning(f"📉 **Fuera del Top 100** (Probabilidad: **{probabilidad * 100:.1f}%**)")
