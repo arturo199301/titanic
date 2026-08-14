@@ -22,7 +22,7 @@ def cargar_y_entrenar():
     df = pd.read_csv('most_streamed_spotify_2025_cleaned_v2.csv')
     df['is_top_100'] = (df['rank'] <= 100).astype(int)
     
-    # ⚠️ Seleccionamos SOLO variables lógicas que NO contienen el resultado directo
+    # Variables lógicas que NO generan data leakage
     features = [
         'daily_streams', 
         'daily_stream_share_pct', 
@@ -34,7 +34,7 @@ def cargar_y_entrenar():
     X = df[features]
     y = df['is_top_100']
     
-    # Separar en entrenamiento y prueba para medir lógica real
+    # Separar en entrenamiento y prueba
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     
     model = RandomForestClassifier(n_estimators=100, max_depth=6, random_state=42)
@@ -84,6 +84,5 @@ if st.button("🚀 Evaluar con Random Forest", use_container_width=True):
     st.divider()
     if pred == 1:
         st.success(f"🎉 **Probable Top 100** (Probabilidad: **{prob * 100:.1f}%**)")
-        st.balloons()
     else:
         st.warning(f"📉 **Fuera del Top 100** (Probabilidad de entrar: **{prob * 100:.1f}%**)")
