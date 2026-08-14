@@ -1,83 +1,96 @@
 import streamlit as st
 import pandas as pd
-from sklearn.svm import SVC
-from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
 # 1. Configuración de página e Imagen
-st.set_page_config(page_title="Spotify SVM 5-Var Classifier", page_icon="🎵", layout="wide")
-st.image("spotify.png")
+st.set_page_config(page_title="Spotify 7-Var Classifier", page_icon="🎵", layout="wide")
+st.image("spotify.png", use_container_width=True)
 
-# 2. Cargar datos
+# 2. Cargar y preparar datos (7 Variables)
 @st.cache_data
 def load_data():
     df = pd.read_csv("most_streamed_spotify_2025_cleaned_v2.csv")
-    # Target Binario: 1 si la cuota de mercado diaria supera el 0.30%, 0 en caso contrario
-    df['dominio_masivo'] = (df['daily_stream_share_pct'] > 0.30).astype(int)
+    
+    # Feature Engineering (Variable 7: Promedio de streams diarios por artista)
+    df['daily_streams_per_artist'] = df['daily_streams'] / df['billed_artist_count']
+    
+    # Target Binario: 1 si es éxito consistente (Top 50 Y >200M streams), 0 si no
+    df['exito_consistente'] = (
+        (df['daily_streams_rank'] <= 50) & 
+        (df['spotify_streams_total'] > 200000000)
+    ).astype(int)
+    
     return df
 
 df = load_data()
 
-# 3. Definir EXACTAMENTE 5 Variables de Entrada
+# 3. Definir EXACTAMENTE 7 Variables de Entrada
 features = [
-    'spotify_streams_total', 
-    'daily_streams', 
-    'daily_streams_rank', 
-    'billed_artist_count', 
-    'is_collaboration_int'
+    'spotify_streams_total',         # 1. Escuchas acumuladas totales
+    'daily_streams',                 # 2. Escuchas registradas en el día
+    'daily_streams_rank',            # 3. Posición en el ranking diario
+    'daily_stream_share_pct',        # 4. Cuota diaria de mercado %
+    'billed_artist_count',           # 5. Cantidad de artistas
+    'is_collaboration_int',          # 6. Indicador de colaboración (0 o 1)
+    'daily_streams_per_artist'       # 7. Promedio de escuchas diarias por artista
 ]
 
 X = df[features]
-y = df['dominio_masivo']
+y = df['exito_consistente']
 
-# 4. Escalar Datos y Entrenar SVM
+# 4. Entrenar el Modelo (Random Forest)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+model = RandomForestClassifier(n_estimators=100, random_state=42).fit(X_train, y_train)
 
-scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
-
-# SVC habilitando probability=True para obtener la probabilidad estimada
-model = SVC(kernel='rbf', probability=True, random_state=42).fit(X_train_scaled, y_train)
-
-acc = accuracy_score(y_test, model.predict(X_test_scaled))
+acc = accuracy_score(y_test, model.predict(X_test))
 
 # 5. Interfaz de Usuario
-st.title("⚔️ Clasificador SVM: Predictor Dominio Masivo (>0.30% Cuota)")
-st.write("Evalúa si la canción alcanzará **Dominio Masivo Diario** usando Máquinas de Vectores de Soporte.")
+st.title("🎯 Clasificador Random Forest: Éxito Consistente (7 Variables)")
+st.write("Ingresa los **7 parámetros** para evaluar si la canción se clasifica como un **Éxito Consistente**.")
 
-# Formulario en 2 columnas
-col1, col2 = st.columns(2)
+# Formulario organizado en 3 columnas
+col1, col2, col3 = st.columns(3)
 
 with col1:
-    totales = st.number_input("1. Streams Totales (spotify_streams_total):", value=300000000, step=10000000)
-    diarias = st.number_input("2. Streams Diarios (daily_streams):", value=750000, step=25000)
-    rank_diario = st.number_input("3. Ranking Diario (daily_streams_rank):", min_value=1, value=15)
+    st.markdown("##### 📈 Volúmenes")
+    totales = st.number_input("1. Streams Totales (spotify_streams_total):", value=250000000, step=10000000)
+    diarias = st.number_input("2. Streams Diarios (daily_streams):", value=600000, step=25000)
 
 with col2:
-    artistas = st.number_input("4. Cantidad de Artistas (billed_artist_count):", min_value=1, max_value=5, value=1)
-    colaboracion = st.checkbox("5. ¿Es Colaboración? (is_collaboration_int)")
+    st.markdown("##### 🏆 Ranking y Mercado")
+    rank_diario = st.number_input("3. Ranking Diario (daily_streams_rank):", min_value=1, value=25)
+    cuota = st.number_input("4. Cuota Diaria % (daily_stream_share_pct):", value=0.25, step=0.01)
+
+with col3:
+    st.markdown("##### 👥 Artistas y Formato")
+    artistas = st.number_input("5. Cantidad de Artistas (billed_artist_count):", min_value=1, max_value=5, value=2)
+    es_colab = st.checkbox("6. ¿Es Colaboración? (is_collaboration_int)", value=True)
+    
+    # Cálculo automático de la Variable 7
+    daily_p_artist = diarias / artistas
+    st.info(f"7. Diarias/Artista (auto): **{daily_p_artist:,.0f}**")
 
 # 6. Predicción
-if st.button("🔮 Clasificar con SVM"):
-    raw_input = [[
+if st.button("🔮 Clasificar Canción", use_container_width=True):
+    input_data = [[
         totales, 
         diarias, 
         rank_diario, 
+        cuota, 
         artistas, 
-        int(colaboracion)
+        int(es_colab), 
+        daily_p_artist
     ]]
     
-    scaled_input = scaler.transform(raw_input)
-    
-    prediccion = model.predict(scaled_input)[0]
-    probabilidad = model.predict_proba(scaled_input)[0][1] * 100
+    prediccion = model.predict(input_data)[0]
+    probabilidad = model.predict_proba(input_data)[0][1] * 100
     
     st.markdown("---")
     if prediccion == 1:
-        st.success(f"🔥 **¡Dominio Masivo Diario!** Probabilidad estimada: **{probabilidad:.1f}%**")
+        st.success(f"🔥 **¡Éxito Consistente!** Probabilidad estimada: **{probabilidad:.1f}%**")
     else:
-        st.info(f"📊 **Cuota Estándar.** Probabilidad de dominio masivo: **{probabilidad:.1f}%**")
+        st.info(f"📉 **Desempeño Estándar.** Probabilidad estimada: **{probabilidad:.1f}%**")
         
-    st.caption(f"Precisión global del modelo SVM en test: **{acc:.2%}**")
+    st.caption(f"Precisión global del modelo en test: **{acc:.2%}**")
