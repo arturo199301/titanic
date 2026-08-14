@@ -29,7 +29,7 @@ X_scaled = scaler.fit_transform(X)
 model = SGDClassifier(loss='log_loss', max_iter=1000, random_state=42).fit(X_scaled, y)
 
 # 4. Interfaz de Usuario
-st.title("¿Canción Viral de Alto Impacto en spotify 2025?")
+st.title("¿Canción Viral de Alto Impacto en spotify año 2025?")
 st.write("Predice si la canción superará el **0.25% de cuota de mercado diaria**.")
 
 # 3 Variables de Entrada
