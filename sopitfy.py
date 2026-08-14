@@ -1,55 +1,71 @@
 import streamlit as st
 import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-# Necesario para abrir la imagen
-from PIL import Image
+
+# 1. Configuración y Título Sencillo
+st.set_page_config(page_title="Predictor Sencillo", page_icon="🎵")
+st.title("🎵 Predictor Rápido de Éxito Musical")
+st.markdown("Ingresa los datos y el modelo te dirá si la canción tiene potencial de éxito.")
 
 # ---------------------------------------------------------
-# Configuración inicial de la página
+# 2. Generar Datos de Ejemplo (Sin usar CSV externo)
 # ---------------------------------------------------------
-st.set_page_config(
-    page_title="Predicción de Éxito en Spotify",
-    # Puedes usar un emoji o la misma imagen como icono (ajustada a tamaño icono)
-    page_icon="🎵",
-    layout="wide"
-)
+@st.cache_data # Para que no regenere datos cada vez
+def generar_datos():
+    # Creamos 100 canciones de ejemplo manualmente
+    np.random.seed(42)
+    reproducciones = np.random.randint(50000, 3000000, 100) # De 50k a 3M
+    compartidos = np.random.randint(1000, 500000, 100)      # De 1k a 500k
+    
+    # Una regla sencilla para el ejemplo: si tiene muchas repros y compartidos, es éxito (1)
+    exito = ((reproducciones > 1500000) & (compartidos > 100000)).astype(int)
+    
+    df = pd.DataFrame({
+        'Reproducciones': reproducciones,
+        'Compartidos': compartidos,
+        'Es_Exito': exito # Esta es nuestra columna objetivo (0 o 1)
+    })
+    return df
+
+df = generar_datos()
 
 # ---------------------------------------------------------
-# Cargar la Imagen de Spotify
-# Asegúrate de que el archivo 'image_0.png' esté en la misma carpeta
+# 3. Entrenar el Modelo (Automático al iniciar)
 # ---------------------------------------------------------
-try:
-    spotify_logo = Image.open('spotify.png')
-except FileNotFoundError:
-    spotify_logo = None
-    st.error("⚠️ No se encontró la imagen 'spotify.png'. Asegúrate de que esté en la misma carpeta que este script.")
+# Definir características (X) y objetivo (y)
+X = df[['Reproducciones', 'Compartidos']]
+y = df['Es_Exito']
 
-# ---------------------------------------------------------
-# Título Principal y Markdown
-# ---------------------------------------------------------
-st.title("🎵 Clasificador de Canciones: ¿Será un Top 100 en Spotify?")
-st.markdown("""
-Esta aplicación utiliza un modelo de Machine Learning (**Random Forest Classifier**) 
-para predecir si una canción logrará estar en el **Top 100** en función de sus métricas de reproducción diaria y colaboración.
-""")
-
-# ... (El resto de la función `load_data` y df = load_data() permanece igual) ...
+# Usamos el modelo más sencillo con configuración por defecto
+modelo = RandomForestClassifier(random_state=42)
+modelo.fit(X, y)
 
 # ---------------------------------------------------------
-# Barra Lateral (Sidebar): Parámetros interactivos e Imagen
+# 4. Interfaz de Usuario para Predecir
 # ---------------------------------------------------------
-# AGREGADO: Mostrar la imagen en la barra lateral
-if spotify_logo:
-    # Mostramos la imagen con el ancho de la barra lateral
-    st.sidebar.image(spotify_logo, use_column_width=True)
+st.subheader("🔮 Ingresa datos de la nueva canción:")
 
-st.sidebar.header("⚙️ Configuración del Modelo")
+# Campos de entrada numéricos
+input_repros = st.number_input("Reproducciones Diarias", min_value=0, value=1000000, step=50000)
+input_shares = st.number_input("Veces Compartida", min_value=0, value=50000, step=5000)
 
-# Hiperparámetros del modelo
-n_estimators = st.sidebar.slider("Número de Árboles (n_estimators)", min_value=10, max_value=200, value=100, step=10)
-max_depth = st.sidebar.slider("Profundidad Máxima del Árbol", min_value=1, max_value=20, value=10)
-test_size = st.sidebar.slider("Proporción de Datos de Prueba (Test Size)", min_value=0.1, max_value=0.4, value=0.2, step=0.05)
+# Botón para ejecutar la magia
+if st.button("🚀 Predecir Resultado"):
+    # Preparar el dato de entrada como una tabla pequeña
+    entrada_usuario = pd.DataFrame([[input_repros, input_shares]], columns=['Reproducciones', 'Compartidos'])
+    
+    # Realizar predicción
+    prediccion = modelo.predict(entrada_usuario)[0]
+    
+    # Mostrar resultado final
+    st.divider()
+    if prediccion == 1:
+        st.success("🎉 **¡Es muy probable que sea un ÉXITO!**")
+        st.balloons() # ¡Efecto divertido!
+    else:
+        st.warning("📉 **Es poco probable que sea un éxito masivo.**")
 
-# ... (El resto del código del modelo, pestañas y predicción permanece igual) ...
+# (Opcional) Ver datos de ejemplo
+if st.checkbox("Ver datos de ejemplo usados para entrenar"):
+    st.write(df.head())
