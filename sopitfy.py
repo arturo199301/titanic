@@ -3,181 +3,70 @@ import pandas as pd
 from PIL import Image
 from sklearn.ensemble import RandomForestClassifier
 
-# ---------------------------------------------------------
-# 1. Configuración de la página y Logo
-# ---------------------------------------------------------
-st.set_page_config(
-    page_title="Predictor de Éxito - Spotify", 
-    page_icon="🎵",
-    layout="centered"
-)
+# 1. Título y Logo
+st.set_page_config(page_title="Predicción Spotify", page_icon="🎵")
 
-# Mostrar la Imagen (Logo de Spotify)
 try:
-    spotify_logo = Image.open('image_1.png')
-    st.image(spotify_logo, width=250)
-except FileNotFoundError:
-    st.warning("⚠️ No se encontró la imagen 'image_1.png'. Revisa que esté en la misma carpeta.")
-except Exception as e:
-    st.error(f"Error al cargar la imagen: {e}")
+    st.image(Image.open('image_1.png'), width=180)
+except:
+    pass
 
-st.title("🎵 Predictor de Éxito en Spotify")
-st.write("Selecciona una canción existente para autocompletar sus datos o ingresa una nueva para predecir si entra al **Top 100 global**.")
+st.title("🎵 Predictor Top 100 de Spotify")
 
-# ---------------------------------------------------------
-# 2. Cargar datos del CSV y Entrenar el Modelo
-# ---------------------------------------------------------
+# 2. Cargar datos y entrenar el modelo Random Forest
 @st.cache_data
-def cargar_datos_y_entrenar():
-    try:
-        df = pd.read_csv('most_streamed_spotify_2025_cleaned_v2.csv')
-    except FileNotFoundError:
-        st.error("No se encontró el archivo 'most_streamed_spotify_2025_cleaned_v2.csv'.")
-        return None, None, None
-
-    # Target de Clasificación: 1 si está en el Top 100 (rank <= 100), 0 si no
+def entrenar():
+    df = pd.read_csv('most_streamed_spotify_2025_cleaned_v2.csv')
     df['is_top_100'] = (df['rank'] <= 100).astype(int)
     
-    # Variables de entrenamiento
     features = [
-        'spotify_streams_total',
-        'daily_streams', 
-        'daily_streams_rank',
-        'billed_artist_count', 
-        'is_collaboration_int', 
-        'daily_stream_share_pct',
-        'wrapped_global_top10_rank'
+        'spotify_streams_total', 'daily_streams', 
+        'billed_artist_count', 'is_collaboration_int', 
+        'daily_stream_share_pct', 'wrapped_global_top10_rank'
     ]
     
-    X = df[features]
-    y = df['is_top_100']
-    
-    # Entrenar Random Forest
     model = RandomForestClassifier(n_estimators=100, random_state=42)
-    model.fit(X, y)
-    
+    model.fit(df[features], df['is_top_100'])
     return df, model, features
 
-df, modelo, features_names = cargar_datos_y_entrenar()
+df, modelo, features = entrenar()
 
-if df is None:
-    st.stop()
+# 3. Autocompletado opcional de canciones
+cancion = st.selectbox("Elegir canción existente (o dejar en blanco):", ["-- Otra --"] + list(df['track']))
 
-# ---------------------------------------------------------
-# 3. Selección y Autocompletado por Canción
-# ---------------------------------------------------------
-st.subheader("🎧 Selección de Canción")
+if cancion != "-- Otra --":
+    fila = df[df['track'] == cancion].iloc[0]
+    v_total, v_daily = int(fila['spotify_streams_total']), int(fila['daily_streams'])
+    v_art, v_collab = int(fila['billed_artist_count']), "Sí" if fila['is_collaboration_int'] == 1 else "No"
+    v_share, v_wrap = float(fila['daily_stream_share_pct']), int(fila['wrapped_global_top10_rank'])
+else:
+    v_total, v_daily, v_art, v_collab, v_share, v_wrap = 200000000, 300000, 1, "No", 0.12, 0
 
-# Crear lista con opción personalizada
-opciones_canciones = ["-- Ingresar Canción Nueva --"] + list(df['track'].astype(str) + " - " + df['artist'].astype(str))
-cancion_seleccionada = st.selectbox("Selecciona una canción del dataset:", opciones_canciones)
-
-# Valores por defecto
-nombre_cancion_def = ""
-artista_def = ""
-streams_totales_def = 250000000
-daily_streams_def = 400000
-daily_rank_def = 50
-artist_count_def = 1
-is_collab_def = "No"
-share_pct_def = 0.15
-wrapped_rank_def = 0
-
-# Si elige una canción existente, cargamos sus datos exactos
-if cancion_seleccionada != "-- Ingresar Canción Nueva --":
-    idx = opciones_canciones.index(cancion_seleccionada) - 1
-    fila = df.iloc[idx]
-    
-    nombre_cancion_def = str(fila['track'])
-    artista_def = str(fila['artist'])
-    streams_totales_def = int(fila['spotify_streams_total'])
-    daily_streams_def = int(fila['daily_streams'])
-    daily_rank_def = int(fila['daily_streams_rank'])
-    artist_count_def = int(fila['billed_artist_count'])
-    is_collab_def = "Sí" if fila['is_collaboration_int'] == 1 else "No"
-    share_pct_def = float(fila['daily_stream_share_pct'])
-    wrapped_rank_def = int(fila['wrapped_global_top10_rank'])
-
-# ---------------------------------------------------------
-# 4. Campos de Entrada (Información y Métricas)
-# ---------------------------------------------------------
-st.subheader("📋 Información y Métricas de la Canción")
-
-col_info1, col_info2 = st.columns(2)
-with col_info1:
-    track_name = st.text_input("Nombre de la Canción", value=nombre_cancion_def, placeholder="Ej: Tití Me Preguntó")
-with col_info2:
-    artist_name = st.text_input("Artista(s)", value=artista_def, placeholder="Ej: Bad Bunny")
-
+# 4. Formulario de entradas
+st.subheader("Ingresa o ajusta los datos:")
 col1, col2 = st.columns(2)
 
 with col1:
-    streams_totales = st.number_input(
-        "Reproducciones Totales (spotify_streams_total)", 
-        min_value=0, value=streams_totales_def, step=1000000
-    )
-    
-    daily_streams_input = st.number_input(
-        "Reproducciones Diarias (daily_streams)", 
-        min_value=0, value=daily_streams_def, step=10000
-    )
-    
-    daily_rank_input = st.number_input(
-        "Ranking Diario (daily_streams_rank)", 
-        min_value=1, max_value=1000, value=daily_rank_def, step=1
-    )
-    
-    billed_artist_count_input = st.number_input(
-        "Número de Artistas (billed_artist_count)", 
-        min_value=1, max_value=10, value=artist_count_def
-    )
+    tot_streams = st.number_input("Streams Totales", value=v_total, step=1000000)
+    daily_streams = st.number_input("Streams Diarios", value=v_daily, step=10000)
+    art_count = st.number_input("Cantidad de Artistas", value=v_art, min_value=1)
 
 with col2:
-    is_collab_input = st.selectbox(
-        "¿Es Colaboración? (is_collaboration)", 
-        options=["No", "Sí"],
-        index=0 if is_collab_def == "No" else 1
-    )
-    
-    daily_stream_share_pct_input = st.number_input(
-        "Cuota de Reproducción Diaria (%)", 
-        min_value=0.0, max_value=100.0, value=share_pct_def, step=0.01
-    )
-    
-    wrapped_rank_input = st.number_input(
-        "Posición Spotify Wrapped Top 10 (0 si no califica)", 
-        min_value=0, max_value=10, value=wrapped_rank_def, step=1
-    )
+    is_collab = st.selectbox("¿Es Colaboración?", ["No", "Sí"], index=0 if v_collab == "No" else 1)
+    share_pct = st.number_input("Cuota Diaria (%)", value=v_share, step=0.01)
+    wrapped = st.number_input("Spotify Wrapped Top 10 (0 si no aplica)", value=v_wrap)
 
-is_collaboration_int_final = 1 if is_collab_input == "Sí" else 0
-
-# ---------------------------------------------------------
-# 5. Ejecución de la Predicción
-# ---------------------------------------------------------
-st.markdown("---")
-
-if st.button("🚀 Predecir Probabilidad de Éxito", use_container_width=True):
-    nueva_cancion_df = pd.DataFrame([[
-        streams_totales,
-        daily_streams_input, 
-        daily_rank_input,
-        billed_artist_count_input, 
-        is_collaboration_int_final, 
-        daily_stream_share_pct_input,
-        wrapped_rank_input
-    ]], columns=features_names)
+# 5. Predicción
+if st.button("🚀 Predecir Éxito", use_container_width=True):
+    collab_int = 1 if is_collab == "Sí" else 0
     
-    prediccion = modelo.predict(nueva_cancion_df)[0]
-    probabilidad = modelo.predict_proba(nueva_cancion_df)[0][1]
+    datos = pd.DataFrame([[tot_streams, daily_streams, art_count, collab_int, share_pct, wrapped]], columns=features)
+    pred = modelo.predict(datos)[0]
+    prob = modelo.predict_proba(datos)[0][1]
     
     st.divider()
-    
-    titulo_cancion = f"**{track_name}**" if track_name else "La canción"
-    if artist_name:
-        titulo_cancion += f" de **{artist_name}**"
-        
-    if prediccion == 1:
-        st.success(f"🎉 {titulo_cancion} **¡ENTRA AL TOP 100!**\n\nProbabilidad estimada: **{probabilidad * 100:.2f}%**")
+    if pred == 1:
+        st.success(f"🎉 **¡ENTRA AL TOP 100!** (Probabilidad: {prob * 100:.1f}%)")
         st.balloons()
     else:
-        st.warning(f"📉 {titulo_cancion} **QUEDA FUERA DEL TOP 100.**\n\nProbabilidad de éxito estimada: **{probabilidad * 100:.2f}%**")
+        st.warning(f"📉 **QUEDA FUERA DEL TOP 100** (Probabilidad: {prob * 100:.1f}%)")
