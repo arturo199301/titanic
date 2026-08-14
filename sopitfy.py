@@ -1,56 +1,74 @@
 import streamlit as st
 import pandas as pd
-from sklearn.linear_model import SGDClassifier
-from sklearn.preprocessing import StandardScaler
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 
 # 1. Configuración de página e Imagen
-st.set_page_config(page_title="Spotify Viral Classifier",page_icon="🎵")
+st.set_page_config(page_title="Spotify Artist Impact Classifier", page_icon="🎵", layout="wide")
 st.image("spotify.png", use_container_width=True)
 
 # 2. Cargar datos
 @st.cache_data
 def load_data():
     df = pd.read_csv("most_streamed_spotify_2025_cleaned_v2.csv")
-    # Target: 1 si la cuota de mercado diaria supera el 0.25%, 0 en caso contrario
-    df['impacto_viral'] = (df['daily_stream_share_pct'] > 0.25).astype(int)
+    # Target Binario: 1 si logró entrar al Top 10 Global Wrapped, 0 si no
+    df['is_wrapped_top10'] = (df['wrapped_global_top10_rank'] > 0).astype(int)
     return df
 
 df = load_data()
 
-# 3. Entrenar el Modelo (SGDClassifier con 3 Variables)
-features = ['spotify_streams_total', 'daily_streams', 'daily_streams_rank']
+# 3. Definir EXACTAMENTE 5 Variables de Entrada enfocadas en el perfil del Artista/Tema
+features = [
+    'billed_artist_count',       # 1. Cantidad de artistas principales
+    'is_collaboration_int',      # 2. ¿Es un junte/colaboración?
+    'spotify_streams_total',     # 3. Tráfico total acumulado
+    'daily_streams',             # 4. Tráfico diario que mueve el artista/tema
+    'daily_stream_share_pct'     # 5. Dominio sobre la cuota del mercado diario
+]
+
 X = df[features]
-y = df['impacto_viral']
+y = df['is_wrapped_top10']
 
-# Escalado de características (recomendado para SGD)
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
+# 4. Entrenar el Árbol de Decisión
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+model = DecisionTreeClassifier(max_depth=4, random_state=42).fit(X_train, y_train)
 
-model = SGDClassifier(loss='log_loss', max_iter=1000, random_state=42).fit(X_scaled, y)
+acc = accuracy_score(y_test, model.predict(X_test))
 
-# 4. Interfaz de Usuario
-st.title("¿Canción Viral de Alto Impacto en spotify año 2025?")
-st.write("Predice si la canción superará el **0.25% de cuota de mercado diaria**.")
+# 5. Interfaz de Usuario
+st.title("🎤 Clasificador por Perfil de Artista: Presence en Wrapped Top 10")
+st.write("Evalúa si el formato del artista y su volumen de reproducción lo posicionan en el **Top 10 Global Wrapped**.")
 
-# 3 Variables de Entrada
+# Formulario organizado en 2 columnas
 col1, col2 = st.columns(2)
 
 with col1:
-    totales = st.number_input("1. Reproducciones Totales:", value=300000000, step=10000000)
-    diarias = st.number_input("2. Reproducciones Diarias:", value=600000, step=25000)
+    artistas = st.number_input("1. Cantidad de Artistas (billed_artist_count):", min_value=1, max_value=5, value=2)
+    es_colab = st.checkbox("2. ¿Es Colaboración entre Artistas? (is_collaboration_int)", value=True)
+    cuota = st.number_input("3. Cuota Diaria de Mercado % (daily_stream_share_pct):", value=0.30, step=0.01)
 
 with col2:
-    rank_diario = st.number_input("3. Ranking Diario:", min_value=1, value=20)
+    totales = st.number_input("4. Total Reproducciones del Tema (spotify_streams_total):", value=350000000, step=10000000)
+    diarias = st.number_input("5. Reproducciones Diarias (daily_streams):", value=750000, step=25000)
 
-# 5. Predicción
-if st.button("Clasificar Impacto"):
-    input_scaled = scaler.transform([[totales, diarias, rank_diario]])
+# 6. Predicción
+if st.button("🔮 Clasificar Presencia en Wrapped"):
+    input_data = [[
+        artistas, 
+        int(es_colab), 
+        totales, 
+        diarias, 
+        cuota
+    ]]
     
-    prediccion = model.predict(input_scaled)[0]
-    probabilidad = model.predict_proba(input_scaled)[0][1] * 100
+    prediccion = model.predict(input_data)[0]
+    probabilidad = model.predict_proba(input_data)[0][1] * 100
     
     st.markdown("---")
     if prediccion == 1:
-        st.success(f"**¡Alto Impacto Viral!** Probabilidad: **{probabilidad:.1f}%**")
+        st.success(f"🌟 **¡Potencial de Wrapped Top 10 Global!** Probabilidad estimada: **{probabilidad:.1f}%**")
     else:
-        st.info(f"**Impacto Estándar.** Probabilidad de ser alto impacto: **{probabilidad:.1f}%**")
+        st.info(f"📊 **Perfil fuera del Top 10 Wrapped.** Probabilidad de entrar: **{probabilidad:.1f}%**")
+        
+    st.caption(f"Precisión global del árbol de decisión en el conjunto de prueba: **{acc:.2%}**")
